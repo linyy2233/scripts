@@ -108,7 +108,7 @@ func main() {
 			listFile(folder, logFilePattern)
 			for _, v := range Logs {
 				if CheckLogChange(v) {
-					fmt.Println(v)
+					go CheckTail(v, rules)
 				}
 			}
 			time.Sleep(time.Second * 300)
