@@ -24,8 +24,7 @@ func Action(logfile string) {
 	fmt.Println(logfile)
 	s := strings.Split(logfile, "/")
 	app := s[4]
-	tomcatRestartCmd := "bash /home/lin/tomcat.sh "+app+" restart"
-	//fmt.Println(tomcatRestartCmd)
+	tomcatRestartCmd := "bash /home/lin/tomcat.sh " + app + " restart"
 	cmd := exec.Command("/bin/bash", "-c", tomcatRestartCmd)
 	var out bytes.Buffer
 
@@ -38,7 +37,6 @@ func Action(logfile string) {
 }
 
 func MonitorFileList(logfile, logFilePattern string) bool {
-	//	b, _ := regexp.MatchString("^/home/lin/test/[^ ]+/catalina.out$", logfile)
 	b, _ := regexp.MatchString(logFilePattern, logfile)
 
 	if b {
@@ -58,7 +56,6 @@ func CheckPattern(line, logPattern string) bool {
 }
 
 func listFile(folder, logFilePattern string) {
-
 	files, _ := ioutil.ReadDir(folder)
 	for _, file := range files {
 		if file.IsDir() {
@@ -93,7 +90,6 @@ func CheckTail(log string, rules []string) {
 
 func CheckLogChange(v string) bool {
 	b := false
-	//fmt.Println(LogsLast)
 	for _, l := range LogsLast {
 		if v == l {
 			b = true
@@ -103,20 +99,6 @@ func CheckLogChange(v string) bool {
 		return false
 	} else {
 		return true
-	}
-}
-func LogAdd() {
-
-	LogsLast = append(LogsLast, Logs...)
-	//fmt.Println(Logs, LogsLast)
-	Logs = []string{}
-	Logs = append(Logs, "f")
-	Logs = append(Logs, "g")
-	fmt.Println(Logs, LogsLast)
-	for _, v := range Logs {
-		if CheckLogChange(v) {
-			fmt.Println(v)
-		}
 	}
 }
 
@@ -149,4 +131,3 @@ func main() {
 
 	time.Sleep(time.Hour * 1000000)
 }
-
