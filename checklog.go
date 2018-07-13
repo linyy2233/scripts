@@ -1,10 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/hpcloud/tail"
 	"io/ioutil"
+	"log"
+	"os/exec"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -16,8 +20,21 @@ func CheckErr(e error) {
 	}
 }
 
-func Action(log string) {
-	fmt.Println(log)
+func Action(logfile string) {
+	fmt.Println(logfile)
+	s := strings.Split(logfile, "/")
+	app := s[4]
+	tomcatRestartCmd := "bash /home/lin/tomcat.sh "+app+" restart"
+	//fmt.Println(tomcatRestartCmd)
+	cmd := exec.Command("/bin/bash", "-c", tomcatRestartCmd)
+	var out bytes.Buffer
+
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		log.Println(err)
+	}
+	fmt.Printf("%s", out.String())
 }
 
 func MonitorFileList(logfile, logFilePattern string) bool {
@@ -88,6 +105,20 @@ func CheckLogChange(v string) bool {
 		return true
 	}
 }
+func LogAdd() {
+
+	LogsLast = append(LogsLast, Logs...)
+	//fmt.Println(Logs, LogsLast)
+	Logs = []string{}
+	Logs = append(Logs, "f")
+	Logs = append(Logs, "g")
+	fmt.Println(Logs, LogsLast)
+	for _, v := range Logs {
+		if CheckLogChange(v) {
+			fmt.Println(v)
+		}
+	}
+}
 
 func main() {
 
@@ -118,3 +149,4 @@ func main() {
 
 	time.Sleep(time.Hour * 1000000)
 }
+
