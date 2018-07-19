@@ -23,8 +23,8 @@ func handleConn(client net.Conn, backend string) {
 func main() {
 	var listen, backend string
 	flags := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-	flags.StringVar(&listen, "listen", "", "Listen for connections on this address.")
-	flags.StringVar(&backend, "backend", "", "The address of the backend to forward to.")
+	flags.StringVar(&listen, "l", "2233", "Listen for connections on this address.")
+	flags.StringVar(&backend, "b", "1.1.1.1:53", "The address of the backend to forward to.")
 	flags.Parse(os.Args[1:])
 	if listen == "" || backend == "" {
 		fmt.Fprintln(os.Stderr, "listen and backend options required")
