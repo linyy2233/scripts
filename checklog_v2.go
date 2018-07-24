@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -23,9 +24,12 @@ type Cfg struct {
 	MonitorDir         string   `json:"monitorDir"`
 	MonitorFilePattern string   `json:"monitorFilePattern"`
 	Rules              []string `json:"rules"`
+	EmailApiUrl        string   `json:"emailApiUrl"`
+	EmailUserList      []string `json:"emailUserList"`
 }
 
 var Logs, LogsLast []string
+var MonitorCfg Cfg
 
 func CheckErr(e error) {
 	if e != nil {
@@ -33,9 +37,28 @@ func CheckErr(e error) {
 	}
 }
 
-func Action(logfile string) {
-	fmt.Println(logfile)
-	s := strings.Split(logfile, "/")
+func AlarmMsg(msg, logFile string) string {
+	hostname, _ := os.Hostname()
+	addrs, _ := net.InterfaceAddrs()
+	var IpAddr string
+	for _, address := range addrs {
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				IpAddr = ipnet.IP.String()
+			}
+		}
+	}
+	return "hostname: " + hostname + "\n" + "ip: " + IpAddr + "\n" + logFile + "\n" + msg
+}
+
+func Action(logFile, msg string) {
+	sendMsg := AlarmMsg(msg, logFile)
+	for _, mailAddr := range MonitorCfg.EmailUserList {
+		SendMail(MonitorCfg.EmailApiUrl, mailAddr, sendMsg)
+	}
+
+	fmt.Println(logFile)
+	s := strings.Split(logFile, "/")
 	app := s[4]
 	tomcatRestartCmd := "bash /home/lin/tomcat.sh " + app + " restart"
 	cmd := exec.Command("/bin/bash", "-c", tomcatRestartCmd)
@@ -90,7 +113,7 @@ func startTailFile(file string, rules []string) {
 	lastInode = fileInode(file)
 	for {
 		lastSeek, lastInode = TailFile(file, lastInode, lastSeek, rules)
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Second * 1)
 	}
 }
 
@@ -133,7 +156,7 @@ func TailFile(file string, lastInode uint64, lastSeek int64, rules []string) (in
 		for _, rule := range rules {
 			if CheckPattern(inputString, rule) {
 				fmt.Println(inputString)
-				Action(file)
+				Action(file, inputString)
 			}
 		}
 	}
@@ -172,19 +195,42 @@ func Rules(rule_url string) Cfg {
 	json.Unmarshal(result, &cfg)
 	return cfg
 }
+
+func SendMail(emailurl, user, msg string) {
+
+	data := make(url.Values)
+	data["subject"] = []string{"log monitor"}
+	data["content"] = []string{msg}
+	data["tos"] = []string{user}
+	res, err := http.PostForm(emailurl, data)
+	if err != nil {
+		log.Println(err)
+	}
+	result, err := ioutil.ReadAll(res.Body)
+	res.Body.Close()
+	if err != nil {
+		log.Println(err)
+		log.Printf("send email to  %s error.\n%s", msg)
+	} else {
+		log.Printf("send email to  %s success.\n%s", msg)
+	}
+	log.Println(string(result))
+
+}
+
 func main() {
 
 	var cfgUrl string
 	flag.StringVar(&cfgUrl, "i", "https://linyy.f3322.net/api/logmonitor", "config api url")
 	flag.Parse()
-	cfg := Rules(cfgUrl)
+	MonitorCfg = Rules(cfgUrl)
 
-	folder := cfg.MonitorDir
-	logFilePattern := cfg.MonitorFilePattern
+	folder := MonitorCfg.MonitorDir
+	logFilePattern := MonitorCfg.MonitorFilePattern
 	listFile(folder, logFilePattern)
 	fmt.Println(Logs)
 
-	rules := cfg.Rules
+	rules := MonitorCfg.Rules
 
 	for _, log := range Logs {
 		go startTailFile(log, rules)
