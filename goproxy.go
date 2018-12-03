@@ -18,6 +18,7 @@ func handleConn(client net.Conn, backend string) {
 	}
 	go io.Copy(server, client)
 	io.Copy(client, server)
+	server.Close()
 }
 
 func main() {
