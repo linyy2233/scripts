@@ -39,6 +39,7 @@ func handleConn(client net.Conn, backend string, limit rate.Limit) {
 	}
 	go connCopy(server, client, limit)
 	connCopy(client, server, limit)
+	server.Close()
 }
 
 func main() {
